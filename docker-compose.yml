@@ -1,0 +1,115 @@
+# docker-compose.yml
+# This file defines a multi-container environment with isolated services.
+# Each application service has its own dedicated PostgreSQL database.
+
+version: '3.8'
+
+services:
+  # --- Authentication Service & its Database ---
+  authn-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULE_NAME: authn-service
+    image: com.lcdev25.idp/authn-service
+    container_name: idp-authn-container
+    ports:
+      - "8081:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-authn:5432/authndb
+      - SPRING_DATASOURCE_USERNAME=user
+      - SPRING_DATASOURCE_PASSWORD=password
+    depends_on:
+      - postgres-authn
+    networks:
+      - idp-network
+
+  postgres-authn:
+    image: postgres:16-alpine
+    container_name: idp-postgres-authn
+    environment:
+      - POSTGRES_DB=authndb
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres-authn-data:/var/lib/postgresql/data
+    networks:
+      - idp-network
+
+  # --- Authorization Service & its Database ---
+  authz-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULE_NAME: authz-service
+    image: com.lcdev25.idp/authz-service
+    container_name: idp-authz-container
+    ports:
+      - "8082:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-authz:5432/authzdb
+      - SPRING_DATASOURCE_USERNAME=user
+      - SPRING_DATASOURCE_PASSWORD=password
+    depends_on:
+      - postgres-authz
+    networks:
+      - idp-network
+
+  postgres-authz:
+    image: postgres:16-alpine
+    container_name: idp-postgres-authz
+    environment:
+      - POSTGRES_DB=authzdb
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres-authz-data:/var/lib/postgresql/data
+    networks:
+      - idp-network
+
+  # --- Notification Service & its Database ---
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULE_NAME: notification-service
+    image: com.lcdev25.idp/notification-service
+    container_name: idp-notification-container
+    ports:
+      - "8083:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-notification:5432/notificationdb
+      - SPRING_DATASOURCE_USERNAME=user
+      - SPRING_DATASOURCE_PASSWORD=password
+    depends_on:
+      - postgres-notification
+    networks:
+      - idp-network
+
+  postgres-notification:
+    image: postgres:16-alpine
+    container_name: idp-postgres-notification
+    environment:
+      - POSTGRES_DB=notificationdb
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres-notification-data:/var/lib/postgresql/data
+    networks:
+      - idp-network
+
+# --- Top-level Definitions ---
+networks:
+  idp-network:
+    driver: bridge
+
+volumes:
+  postgres-authn-data:
+    driver: local
+  postgres-authz-data:
+    driver: local
+  postgres-notification-data:
+    driver: local
