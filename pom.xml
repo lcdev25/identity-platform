@@ -11,6 +11,7 @@
     <groupId>com.lcdev25</groupId>
     <artifactId>Identity-Platform</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
     <name>Identity-Platform</name>
     <description>My base identity platlform project</description>
     <url/>
@@ -20,6 +21,11 @@
     <developers>
         <developer/>
     </developers>
+    <modules>
+        <module>notfication-service</module>
+        <module>authn-service</module>
+        <module>authz-service</module>
+    </modules>
     <scm>
         <connection/>
         <developerConnection/>
