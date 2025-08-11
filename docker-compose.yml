@@ -20,8 +20,10 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-authn:5432/authndb
       - SPRING_DATASOURCE_USERNAME=user
       - SPRING_DATASOURCE_PASSWORD=password
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092 # For producing messages
     depends_on:
       - postgres-authn
+      - kafka-init
     networks:
       - idp-network
 
@@ -52,8 +54,10 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-authz:5432/authzdb
       - SPRING_DATASOURCE_USERNAME=user
       - SPRING_DATASOURCE_PASSWORD=password
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092 # For producing messages
     depends_on:
       - postgres-authz
+      - kafka-init
     networks:
       - idp-network
 
@@ -84,8 +88,10 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-notification:5432/notificationdb
       - SPRING_DATASOURCE_USERNAME=user
       - SPRING_DATASOURCE_PASSWORD=password
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092 # For consuming messages
     depends_on:
       - postgres-notification
+      - kafka-init
     networks:
       - idp-network
 
@@ -98,6 +104,46 @@ services:
       - POSTGRES_PASSWORD=password
     volumes:
       - postgres-notification-data:/var/lib/postgresql/data
+    networks:
+      - idp-network
+
+  # --- Kafka Messaging Stack ---
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: idp-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - idp-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: idp-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - idp-network
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: idp-kafka-init
+    depends_on:
+      - kafka
+    command: >
+      bash -c "
+        echo 'Waiting for Kafka to be ready...' &&
+        cub kafka-ready -b kafka:9092 1 30 &&
+        echo 'Kafka is ready!' &&
+        kafka-topics --create --topic notifications --partitions 1 --replication-factor 1 --if-not-exists --bootstrap-server kafka:9092
+      "
     networks:
       - idp-network
 
