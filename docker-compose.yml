@@ -16,6 +16,7 @@ services:
     container_name: idp-authn-container
     ports:
       - "8081:8080"
+      - "9091:9090"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-authn:5432/authndb
       - SPRING_DATASOURCE_USERNAME=user
