@@ -1,0 +1,35 @@
+sequenceDiagram
+    actor User
+    box rgb(140, 140, 140) Internal Services
+        participant Gateway
+        participant Authn
+        participant DB
+    end
+
+    User->>Gateway: POST /login (email, password)
+    activate Gateway
+    Gateway->>Authn: VerifyCredentials(email, password)
+    activate Authn
+
+    Note over Authn,DB: Find user and compare password hash.
+    Authn->>DB: SELECT * FROM users WHERE email=...
+    activate DB
+    DB-->>Authn: User record (with hashed password)
+    deactivate DB
+
+    alt Password Match
+        Authn-->>Gateway: Success (user_id)
+    else Password Mismatch
+        Authn-->>Gateway: Failure (Invalid Credentials)
+    end
+    loop Again and Again
+        Authn->>Gateway: Until this success
+    end
+    deactivate Authn
+
+    alt Login Success
+        Gateway-->>User: 200 OK (JWT Token)
+    else Login Failure
+        Gateway-->>User: 401 Unauthorized
+    end
+    deactivate Gateway
